@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Leo Dev Club</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#121a2f; --panel2:#18233d; --text:#f5f7ff; --muted:#9fb0d0;
+    --accent:#6ee7ff; --accent2:#8b5cf6; --good:#34d399; --bad:#fb7185; --warn:#fbbf24;
+    --line:#263552;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:
+    radial-gradient(circle at top left,#172554 0,transparent 35%),
+    radial-gradient(circle at bottom right,#3b0764 0,transparent 30%),var(--bg);color:var(--text);min-height:100vh}
+  button,input,textarea,select{font:inherit}
+  .wrap{max-width:1100px;margin:auto;padding:24px}
+  .card{background:rgba(18,26,47,.94);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .login{max-width:460px;margin:10vh auto}
+  h1,h2,h3{margin:0 0 10px}
+  .sub{color:var(--muted);line-height:1.5}
+  input,textarea,select{width:100%;background:#0d1529;color:var(--text);border:1px solid #31405f;border-radius:14px;padding:13px 14px;outline:none}
+  textarea{min-height:120px;resize:vertical}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+  .btn{border:0;border-radius:14px;padding:12px 16px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06111a}
+  .btn.secondary{background:#23304b;color:var(--text)}
+  .btn.good{background:var(--good);color:#052018}
+  .btn.bad{background:var(--bad);color:#26040b}
+  .btn.warn{background:var(--warn);color:#2a1900}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row>*{flex:1}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+  .pill{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;background:#1b2946;color:#cfe5ff;border:1px solid #2e426d}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .metric{background:var(--panel2);border:1px solid var(--line);border-radius:18px;padding:18px}
+  .metric b{display:block;font-size:30px;margin-top:6px}
+  .section{margin-top:18px}
+  .item{border:1px solid var(--line);background:#10182c;border-radius:16px;padding:16px;margin-top:10px}
+  .item-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .badge{font-size:12px;font-weight:800;padding:6px 9px;border-radius:999px}
+  .pending{background:#3b2f10;color:#ffd66e}
+  .approved{background:#0d3a2d;color:#83f2c7}
+  .rejected{background:#451924;color:#ff9cad}
+  .paid{background:#153b59;color:#8ed4ff}
+  .tiny{font-size:12px;color:var(--muted)}
+  .money{font-weight:900;color:#a7f3d0}
+  .coins{font-weight:900;color:#fde68a}
+  .hidden{display:none!important}
+  .shop{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .reward{background:#131d34;border:1px solid var(--line);border-radius:16px;padding:14px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .actions .btn{padding:9px 12px}
+  .note{padding:12px 14px;border-radius:14px;background:#0e2233;border:1px solid #1d4e63;color:#c7f4ff;margin-top:12px}
+  .danger-note{background:#31131b;border-color:#6b2435;color:#ffd0d8}
+  @media(max-width:750px){.grid{grid-template-columns:1fr}.shop{grid-template-columns:1fr}.topbar{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section id="login" class="card login">
+    <div class="pill">🎮 Leo Dev Club</div>
+    <h1 style="margin-top:14px">Accesso</h1>
+    <p class="sub">Inserisci il tuo codice personale per entrare.</p>
+    <input id="code" inputmode="numeric" placeholder="Codice personale" maxlength="6">
+    <button class="btn" style="width:100%;margin-top:12px" onclick="login()">Entra</button>
+    <div id="loginError" class="danger-note hidden">Codice non valido.</div>
+    <p class="tiny" style="margin-top:16px">Demo locale: i dati restano salvati solo su questo browser.</p>
+  </section>
+
+  <main id="app" class="hidden">
+    <div class="topbar">
+      <div>
+        <div class="pill" id="rolePill"></div>
+        <h1 id="welcome" style="margin-top:10px"></h1>
+      </div>
+      <button class="btn secondary" onclick="logout()">Esci</button>
+    </div>
+
+    <section id="friendView" class="hidden">
+      <div class="grid">
+        <div class="metric"><span class="sub">Lavori approvati</span><b id="friendApproved">0</b></div>
+        <div class="metric"><span class="sub">Stipendio da ricevere</span><b id="friendPay">CHF 0</b></div>
+        <div class="metric"><span class="sub">Monete virtuali</span><b id="friendCoins">🪙 0</b></div>
+      </div>
+
+      <div class="card section">
+        <h2>Invia una nuova idea</h2>
+        <p class="sub">Puoi proporre un sito o un gioco. Quando premi Invia, il sito ti dirà che Leo ha ricevuto la proposta.</p>
+        <div class="row">
+          <select id="ideaType">
+            <option value="Sito">🌐 Sito</option>
+            <option value="Gioco">🎮 Gioco</option>
+          </select>
+          <input id="ideaTitle" placeholder="Titolo dell'idea">
+        </div>
+        <textarea id="ideaText" placeholder="Spiega bene cosa vuoi creare..." style="margin-top:12px"></textarea>
+        <button class="btn" style="margin-top:12px" onclick="submitIdea()">Invia idea a Leo</button>
+      </div>
+
+      <div class="card section">
+        <h2>Le mie idee</h2>
+        <div id="friendIdeas"></div>
+      </div>
+
+      <div class="card section">
+        <h2>Negozio premi</h2>
+        <p class="sub">Usa le monete virtuali per richiedere un premio. Leo potrà poi prepararti una scatola premio.</p>
+        <div id="shop" class="shop"></div>
+      </div>
+    </section>
+
+    <section id="adminView" class="hidden">
+      <div class="grid">
+        <div class="metric"><span class="sub">Idee totali</span><b id="adminIdeas">0</b></div>
+        <div class="metric"><span class="sub">CHF da pagare</span><b id="adminDue">CHF 0</b></div>
+        <div class="metric"><span class="sub">Richieste premio</span><b id="adminRewards">0</b></div>
+      </div>
+
+      <div class="card section">
+        <h2>Idee ricevute</h2>
+        <p class="sub">Ogni lavoro approvato vale CHF 3. Puoi approvare, rifiutare e segnare il pagamento come effettuato.</p>
+        <div id="adminIdeasList"></div>
+      </div>
+
+      <div class="card section">
+        <h2>Gestione monete</h2>
+        <div class="row">
+          <select id="coinUser"></select>
+          <input id="coinAmount" type="number" min="1" placeholder="Monete da aggiungere">
+        </div>
+        <button class="btn warn" style="margin-top:12px" onclick="addCoins()">Aggiungi monete</button>
+      </div>
+
+      <div class="card section">
+        <h2>Richieste premi</h2>
+        <div id="rewardRequests"></div>
+      </div>
+
+      <div class="note">🔒 Questa è una versione locale: le idee non vengono davvero inviate su Internet. Per controllarle devi usare lo stesso browser/dispositivo dove sono state scritte, oppure accedere al loro account su quel dispositivo.</div>
+    </section>
+  </main>
+</div>
+
+<script>
+const USERS = {
+  "242424": {id:"mael", name:"Maël", role:"friend"},
+  "458934": {id:"oleksii", name:"Oleksii", role:"friend"},
+  "151415": {id:"leo", name:"Leo", role:"admin"}
+};
+const REWARDS = [
+  {id:"mini", name:"Scatola sorpresa Mini", cost:20},
+  {id:"plus", name:"Scatola sorpresa Plus", cost:40},
+  {id:"mega", name:"Scatola sorpresa Mega", cost:70},
+  {id:"mystery", name:"Premio misterioso", cost:100}
+];
+
+function load(){
+  const d = JSON.parse(localStorage.getItem("leoDevClubData") || "null");
+  return d || {
+    ideas: [],
+    coins: {mael:0, oleksii:0},
+    rewards: []
+  };
+}
+function save(d){ localStorage.setItem("leoDevClubData", JSON.stringify(d)); }
+let data = load();
+let currentUser = null;
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+}
+function money(n){ return "CHF " + Number(n).toFixed(0); }
+function statusLabel(s){
+  if(s==="approved") return '<span class="badge approved">APPROVATO</span>';
+  if(s==="rejected") return '<span class="badge rejected">RIFIUTATO</span>';
+  if(s==="paid") return '<span class="badge paid">PAGATO</span>';
+  return '<span class="badge pending">IN ATTESA</span>';
+}
+function login(){
+  const c=document.getElementById("code").value.trim();
+  if(!USERS[c]){
+    document.getElementById("loginError").classList.remove("hidden"); return;
+  }
+  currentUser = USERS[c];
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  render();
+}
+function logout(){
+  currentUser=null;
+  document.getElementById("code").value="";
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("login").classList.remove("hidden");
+}
+function render(){
+  if(!currentUser) return;
+  document.getElementById("welcome").textContent="Ciao, "+currentUser.name+" 👋";
+  document.getElementById("rolePill").textContent=currentUser.role==="admin" ? "🛠️ ADMIN" : "👤 MEMBRO";
+  document.getElementById("friendView").classList.toggle("hidden",currentUser.role!=="friend");
+  document.getElementById("adminView").classList.toggle("hidden",currentUser.role!=="admin");
+  if(currentUser.role==="friend") renderFriend();
+  else renderAdmin();
+}
+function submitIdea(){
+  const title=document.getElementById("ideaTitle").value.trim();
+  const text=document.getElementById("ideaText").value.trim();
+  const type=document.getElementById("ideaType").value;
+  if(!title || !text){ alert("Scrivi titolo e descrizione."); return; }
+  data.ideas.unshift({
+    id: Date.now().toString(),
+    userId: currentUser.id,
+    userName: currentUser.name,
+    type,title,text,status:"pending",value:3,
+    created:new Date().toISOString()
+  });
+  save(data);
+  alert("✅ Idea inviata a Leo!");
+  document.getElementById("ideaTitle").value="";
+  document.getElementById("ideaText").value="";
+  renderFriend();
+}
+function renderFriend(){
+  const mine=data.ideas.filter(x=>x.userId===currentUser.id);
+  const approved=mine.filter(x=>x.status==="approved"||x.status==="paid").length;
+  const unpaid=mine.filter(x=>x.status==="approved").reduce((s,x)=>s+x.value,0);
+  document.getElementById("friendApproved").textContent=approved;
+  document.getElementById("friendPay").textContent=money(unpaid);
+  document.getElementById("friendCoins").textContent="🪙 "+(data.coins[currentUser.id]||0);
+
+  document.getElementById("friendIdeas").innerHTML = mine.length ? mine.map(x=>`
+    <div class="item">
+      <div class="item-head">
+        <div><b>${esc(x.type)} — ${esc(x.title)}</b><div class="tiny">${new Date(x.created).toLocaleDateString("it-CH")}</div></div>
+        ${statusLabel(x.status)}
+      </div>
+      <p>${esc(x.text)}</p>
+      ${(x.status==="approved"||x.status==="paid")?`<div class="money">Valore: CHF ${x.value}</div>`:""}
+    </div>`).join("") : '<p class="sub">Non hai ancora inviato idee.</p>';
+
+  document.getElementById("shop").innerHTML=REWARDS.map(r=>`
+    <div class="reward">
+      <h3>${esc(r.name)}</h3>
+      <div class="coins">🪙 ${r.cost}</div>
+      <button class="btn secondary" style="margin-top:10px" onclick="buyReward('${r.id}')">Richiedi premio</button>
+    </div>`).join("");
+}
+function setStatus(id,status){
+  const i=data.ideas.find(x=>x.id===id);
+  if(!i) return;
+  i.status=status;
+  save(data); renderAdmin();
+}
+function addCoins(){
+  const uid=document.getElementById("coinUser").value;
+  const amt=parseInt(document.getElementById("coinAmount").value,10);
+  if(!amt || amt<1) return alert("Inserisci un numero di monete valido.");
+  data.coins[uid]=(data.coins[uid]||0)+amt;
+  save(data);
+  document.getElementById("coinAmount").value="";
+  renderAdmin();
+}
+function buyReward(id){
+  const reward=REWARDS.find(r=>r.id===id);
+  const bal=data.coins[currentUser.id]||0;
+  if(bal<reward.cost) return alert("Non hai abbastanza monete.");
+  data.coins[currentUser.id]=bal-reward.cost;
+  data.rewards.unshift({
+    id:Date.now().toString(), userId:currentUser.id, userName:currentUser.name,
+    rewardId:reward.id, rewardName:reward.name, cost:reward.cost,
+    status:"requested", created:new Date().toISOString()
+  });
+  save(data); renderFriend();
+  alert("Premio richiesto! Leo lo vedrà nella pagina admin.");
+}
+function completeReward(id){
+  const r=data.rewards.find(x=>x.id===id);
+  if(r) r.status="delivered";
+  save(data); renderAdmin();
+}
+function renderAdmin(){
+  document.getElementById("adminIdeas").textContent=data.ideas.length;
+  const due=data.ideas.filter(x=>x.status==="approved").reduce((s,x)=>s+x.value,0);
+  document.getElementById("adminDue").textContent=money(due);
+  document.getElementById("adminRewards").textContent=data.rewards.filter(x=>x.status==="requested").length;
+
+  document.getElementById("coinUser").innerHTML=`
+    <option value="mael">Maël — 🪙 ${data.coins.mael||0}</option>
+    <option value="oleksii">Oleksii — 🪙 ${data.coins.oleksii||0}</option>`;
+
+  document.getElementById("adminIdeasList").innerHTML=data.ideas.length ? data.ideas.map(x=>`
+    <div class="item">
+      <div class="item-head">
+        <div>
+          <b>${esc(x.userName)} · ${esc(x.type)} — ${esc(x.title)}</b>
+          <div class="tiny">${new Date(x.created).toLocaleString("it-CH")}</div>
+        </div>${statusLabel(x.status)}
+      </div>
+      <p>${esc(x.text)}</p>
+      <div class="money">Valore lavoro: CHF ${x.value}</div>
+      <div class="actions">
+        ${x.status==="pending"?`
+          <button class="btn good" onclick="setStatus('${x.id}','approved')">Approva</button>
+          <button class="btn bad" onclick="setStatus('${x.id}','rejected')">Rifiuta</button>`:""}
+        ${x.status==="approved"?`
+          <button class="btn" onclick="setStatus('${x.id}','paid')">Segna pagato</button>`:""}
+      </div>
+    </div>`).join("") : '<p class="sub">Nessuna idea ricevuta.</p>';
+
+  document.getElementById("rewardRequests").innerHTML=data.rewards.length ? data.rewards.map(r=>`
+    <div class="item">
+      <div class="item-head">
+        <div><b>${esc(r.userName)} — ${esc(r.rewardName)}</b><div class="tiny">${new Date(r.created).toLocaleString("it-CH")}</div></div>
+        <span class="badge ${r.status==="delivered"?"paid":"pending"}">${r.status==="delivered"?"CONSEGNATO":"DA PREPARARE"}</span>
+      </div>
+      <div class="coins">Costo: 🪙 ${r.cost}</div>
+      ${r.status!=="delivered"?`<button class="btn good" style="margin-top:10px" onclick="completeReward('${r.id}')">Segna consegnato</button>`:""}
+    </div>`).join("") : '<p class="sub">Nessuna richiesta premio.</p>';
+}
+</script>
+</body>
+</html>
